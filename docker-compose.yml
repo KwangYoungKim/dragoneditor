@@ -1,0 +1,25 @@
+version: '3'
+services:
+  onlyoffice-ds:
+    image: onlyoffice/documentserver:latest
+    container_name: onlyoffice-ds
+    ports:
+      - "8080:80"
+    environment:
+      # 로컬 개발 환경 편의를 위해 JWT 검증을 비활성화합니다.
+      - JWT_ENABLED=false
+      # 사설 IP 대역(192.168.x.x 등)에 위치한 백엔드로부터 문서를 다운로드할 수 있도록 허용합니다.
+      - ALLOW_PRIVATE_IP_ADDRESS=true
+    restart: always
+    volumes:
+      - onlyoffice_data:/var/log/onlyoffice
+      - onlyoffice_lib:/var/lib/onlyoffice
+      - onlyoffice_db:/var/spool/onlyoffice
+      # 로고 이미지 및 브랜딩(DragonEditor) 유지를 위한 볼륨 마운트
+      - ./public/header-logo_s.svg:/var/www/onlyoffice/documentserver/web-apps/apps/common/main/resources/img/header/header-logo_s.svg
+      - ./public/dark-logo_s.svg:/var/www/onlyoffice/documentserver/web-apps/apps/common/main/resources/img/header/dark-logo_s.svg
+
+volumes:
+  onlyoffice_data:
+  onlyoffice_lib:
+  onlyoffice_db:

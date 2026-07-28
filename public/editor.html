@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>문서 협업 편집기</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      padding: 0;
+      margin: 0;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      background: #0b0f19;
+      font-family: inherit;
+    }
+
+    .editor-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      margin: 0;
+      padding: 0;
+    }
+
+    #iframeEditor {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    .editor-loader {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0b0f19;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      z-index: 5;
+      transition: opacity 0.5s ease;
+    }
+
+    .editor-loader p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* Floating Menu Container */
+    .floating-menu {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(17, 24, 39, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 30px;
+      padding: 6px 12px 6px 6px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      z-index: 9999;
+      cursor: grab;
+      user-select: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .floating-menu:active {
+      cursor: grabbing;
+      border-color: rgba(59, 130, 246, 0.3);
+      box-shadow: 0 16px 40px rgba(59, 130, 246, 0.2);
+    }
+
+    .floating-drag-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 32px;
+      color: rgba(255, 255, 255, 0.3);
+      cursor: move;
+    }
+
+    .btn-floating-action {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .btn-floating-action:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.2);
+    }
+
+    .btn-floating-action:active {
+      transform: translateY(0);
+    }
+
+    .btn-chat-toggle {
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      color: #3b82f6;
+    }
+
+    .btn-chat-toggle.active {
+      background: #3b82f6;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-ribbon-toggle {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #10b981;
+    }
+
+    .btn-fullscreen-toggle {
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+      color: #8b5cf6;
+    }
+
+    .btn-fullscreen-toggle.active {
+      background: #8b5cf6;
+      color: #fff;
+      box-shadow: 0 0 10px rgba(139, 92, 246, 0.4);
+    }
+
+    .btn-back-dashboard {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Fullscreen Editor Container -->
+  <div class="editor-container">
+    <div class="editor-loader" id="editor-loader">
+      <i data-lucide="loader" class="animate-spin" style="width: 48px; height: 48px; stroke: #3b82f6;"></i>
+      <p>DragonEditor Document Server를 연결하는 중입니다...</p>
+    </div>
+    <div id="iframeEditor"></div>
+  </div>
+
+  <!-- Draggable Floating Action Control Menu -->
+  <div class="floating-menu" id="floating-menu">
+    <!-- Drag Handle -->
+    <div class="floating-drag-handle" id="floating-drag-handle" title="끌어서 위치 이동">
+      <i data-lucide="grip-vertical" style="width: 14px; height: 14px;"></i>
+    </div>
+
+    <!-- Chat Toggle Button -->
+    <button class="btn-floating-action btn-chat-toggle" id="btn-toggle-chat" title="채팅창 켜기/끄기">
+      <i data-lucide="message-square" style="width: 16px; height: 16px;"></i>
+    </button>
+
+    <!-- Ribbon Toggle Button -->
+    <button class="btn-floating-action btn-ribbon-toggle" id="btn-toggle-ribbon" title="도구창 접기/펼치기 팁">
+      <i data-lucide="chevrons-up-down" style="width: 16px; height: 16px;"></i>
+    </button>
+
+    <!-- Fullscreen Toggle Button -->
+    <button class="btn-floating-action btn-fullscreen-toggle" id="btn-toggle-fullscreen" title="전체화면 보기">
+      <i data-lucide="maximize" style="width: 16px; height: 16px;"></i>
+    </button>
+
+    <!-- Go Back Button -->
+    <button class="btn-floating-action btn-back-dashboard" id="btn-back" title="대시보드로 돌아가기">
+      <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+    </button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      const filename = params.get('filename');
+
+      if (!filename) {
+        alert('잘못된 접근입니다. 파일명이 누락되었습니다.');
+        window.location.href = 'index.html';
+        return;
+      }
+
+      const decodedFilename = decodeURIComponent(filename);
+
+      // 채팅창 토글 상태 파싱 (기본값: 켜짐 true)
+      const chatParam = params.get('chat');
+      const chatEnabled = chatParam === null ? true : chatParam === 'true';
+
+      const toggleBtn = document.getElementById('btn-toggle-chat');
+      const ribbonBtn = document.getElementById('btn-toggle-ribbon');
+      const fullscreenBtn = document.getElementById('btn-toggle-fullscreen');
+      const backBtn = document.getElementById('btn-back');
+
+      // 채팅 버튼 활성화 여부 디자인 반영
+      if (chatEnabled) {
+        toggleBtn.classList.add('active');
+        toggleBtn.title = "채팅창 끄기";
+      } else {
+        toggleBtn.classList.remove('active');
+        toggleBtn.title = "채팅창 켜기";
+      }
+
+      // 1. 채팅창 토글 클릭 이벤트
+      toggleBtn.addEventListener('click', () => {
+        const newChatState = !chatEnabled;
+        window.location.href = `editor.html?filename=${filename}&chat=${newChatState}`;
+      });
+
+      // 2. 대시보드로 돌아가기 클릭 이벤트
+      backBtn.addEventListener('click', () => {
+        window.location.href = 'index.html';
+      });
+
+      // 3. 도구창 접기/펼치기 안내 팁 토스트 노출
+      ribbonBtn.addEventListener('click', () => {
+        showToast("💡 팁: 상단의 메뉴 탭(홈, 삽입 등)을 더블 클릭하거나 우측 상단의 접기 아이콘을 누르면 도구 모음 창을 즉시 접고 펼칠 수 있습니다.");
+      });
+
+      // 4. 전체화면 보기/원래화면 복귀 토글 이벤트
+      fullscreenBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().then(() => {
+            updateFullscreenUI(true);
+          }).catch(err => {
+            showToast(`⚠️ 전체화면 활성화 실패: ${err.message}`);
+          });
+        } else {
+          document.exitFullscreen().then(() => {
+            updateFullscreenUI(false);
+          });
+        }
+      });
+
+      function updateFullscreenUI(isFullscreen) {
+        if (isFullscreen) {
+          fullscreenBtn.classList.add('active');
+          fullscreenBtn.title = "원래화면 복귀";
+          fullscreenBtn.innerHTML = '<i data-lucide="minimize" style="width: 16px; height: 16px;"></i>';
+        } else {
+          fullscreenBtn.classList.remove('active');
+          fullscreenBtn.title = "전체화면 보기";
+          fullscreenBtn.innerHTML = '<i data-lucide="maximize" style="width: 16px; height: 16px;"></i>';
+        }
+        lucide.createIcons();
+      }
+
+      // 브라우저 기본단축키(F11 등) 혹은 Esc 키를 통한 전체화면 해제 이벤트 감지
+      document.addEventListener('fullscreenchange', () => {
+        updateFullscreenUI(!!document.fullscreenElement);
+      });
+
+      lucide.createIcons();
+
+      // ==========================================
+      // [플로팅 메뉴 드래그 핸들러 구현]
+      // ==========================================
+      const floatingMenu = document.getElementById('floating-menu');
+      const dragHandle = document.getElementById('floating-drag-handle');
+      let isDragging = false;
+      let offsetX = 0;
+      let offsetY = 0;
+
+      // 마우스 드래그 이벤트
+      dragHandle.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        floatingMenu.style.transition = 'none';
+        offsetX = e.clientX - floatingMenu.getBoundingClientRect().left;
+        offsetY = e.clientY - floatingMenu.getBoundingClientRect().top;
+        e.preventDefault();
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const x = e.clientX - offsetX;
+        const y = e.clientY - offsetY;
+
+        const maxX = window.innerWidth - floatingMenu.offsetWidth - 16;
+        const maxY = window.innerHeight - floatingMenu.offsetHeight - 16;
+
+        floatingMenu.style.left = `${Math.max(16, Math.min(x, maxX))}px`;
+        floatingMenu.style.top = `${Math.max(16, Math.min(y, maxY))}px`;
+        floatingMenu.style.bottom = 'auto';
+        floatingMenu.style.right = 'auto';
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+        }
+      });
+
+      // 터치 모바일 드래그 이벤트
+      dragHandle.addEventListener('touchstart', (e) => {
+        isDragging = true;
+        floatingMenu.style.transition = 'none';
+        const touch = e.touches[0];
+        offsetX = touch.clientX - floatingMenu.getBoundingClientRect().left;
+        offsetY = touch.clientY - floatingMenu.getBoundingClientRect().top;
+      });
+
+      document.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const touch = e.touches[0];
+        const x = touch.clientX - offsetX;
+        const y = touch.clientY - offsetY;
+
+        const maxX = window.innerWidth - floatingMenu.offsetWidth - 16;
+        const maxY = window.innerHeight - floatingMenu.offsetHeight - 16;
+
+        floatingMenu.style.left = `${Math.max(16, Math.min(x, maxX))}px`;
+        floatingMenu.style.top = `${Math.max(16, Math.min(y, maxY))}px`;
+        floatingMenu.style.bottom = 'auto';
+        floatingMenu.style.right = 'auto';
+      });
+
+      document.addEventListener('touchend', () => {
+        isDragging = false;
+      });
+
+      // 화면 크기 재조정 시 플로팅 메뉴 이탈 방지
+      window.addEventListener('resize', () => {
+        const rect = floatingMenu.getBoundingClientRect();
+        const maxX = window.innerWidth - floatingMenu.offsetWidth - 16;
+        const maxY = window.innerHeight - floatingMenu.offsetHeight - 16;
+
+        if (rect.left > maxX || rect.top > maxY) {
+          floatingMenu.style.left = `${Math.max(16, Math.min(rect.left, maxX))}px`;
+          floatingMenu.style.top = `${Math.max(16, Math.min(rect.top, maxY))}px`;
+        }
+      });
+
+      // ==========================================
+      // [ONLYOFFICE Editor Config & Init]
+      // ==========================================
+      try {
+        const response = await fetch(`/api/config/${filename}?chat=${chatEnabled}`);
+        if (response.status === 401) {
+          alert('로그인이 만료되었거나 세션이 없습니다. 로그인 화면으로 이동합니다.');
+          window.location.href = 'login.html';
+          return;
+        }
+        if (!response.ok) {
+          throw new Error('설정 데이터를 가져오는데 실패했습니다.');
+        }
+        const config = await response.json();
+
+        const onlyofficeDsUrl = `${window.location.protocol}//${window.location.hostname}:8080`;
+        const scriptUrl = `${onlyofficeDsUrl}/web-apps/apps/api/documents/api.js`;
+
+        const script = document.createElement('script');
+        script.src = scriptUrl;
+        script.onload = () => {
+          initializeEditor(config);
+        };
+        script.onerror = () => {
+          document.getElementById('editor-loader').innerHTML = `
+            <i data-lucide="alert-triangle" style="width: 48px; height: 48px; stroke: #ef4444;"></i>
+            <p style="color: #ef4444; font-weight: 600; margin-top: 10px;">ONLYOFFICE Document Server 연결 실패</p>
+            <p style="font-size: 13px; color: var(--text-secondary); max-width: 300px; text-align: center;">
+              http://localhost:8080 주소의 ONLYOFFICE 컨테이너가 정상적으로 실행 중인지 확인해 주세요.
+            </p>
+          `;
+          lucide.createIcons();
+        };
+        document.head.appendChild(script);
+
+      } catch (err) {
+        console.error(err);
+        alert('에디터를 실행하는 동안 오류가 발생했습니다: ' + err.message);
+        window.location.href = 'index.html';
+      }
+
+      function initializeEditor(config) {
+        try {
+          const docEditor = new DocsAPI.DocEditor("iframeEditor", config);
+
+          setTimeout(() => {
+            const loader = document.getElementById('editor-loader');
+            loader.style.opacity = 0;
+            setTimeout(() => {
+              loader.style.display = 'none';
+            }, 500);
+          }, 1000);
+
+        } catch (e) {
+          console.error(e);
+          alert('ONLYOFFICE API 초기화 실패: ' + e.message);
+        }
+      }
+
+      // ==========================================
+      // [프리미엄 토스트 알림 기능 구현]
+      // ==========================================
+      function showToast(message) {
+        const existing = document.getElementById('editor-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.id = 'editor-toast';
+        toast.style.position = 'fixed';
+        toast.style.top = '24px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.background = 'rgba(17, 24, 39, 0.92)';
+        toast.style.color = '#fff';
+        toast.style.padding = '12px 24px';
+        toast.style.borderRadius = '30px';
+        toast.style.boxShadow = '0 10px 30px rgba(0,0,0,0.6)';
+        toast.style.border = '1px solid rgba(16, 185, 129, 0.4)';
+        toast.style.fontSize = '13px';
+        toast.style.fontWeight = '500';
+        toast.style.zIndex = '99999';
+        toast.style.display = 'flex';
+        toast.style.alignItems = 'center';
+        toast.style.gap = '8px';
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        toast.style.pointerEvents = 'none';
+        toast.style.width = 'max-content';
+        toast.style.maxWidth = '90vw';
+        toast.style.textAlign = 'center';
+
+        toast.innerHTML = `
+          <i data-lucide="info" style="width: 16px; height: 16px; color: #10b981; flex-shrink: 0;"></i>
+          <span>${message}</span>
+        `;
+        document.body.appendChild(toast);
+        lucide.createIcons();
+
+        setTimeout(() => toast.style.opacity = '1', 50);
+
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => toast.remove(), 300);
+        }, 5000);
+      }
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 - 프로젝트 문서관리</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      justify-content: center;
+      align-items: center;
+      padding: 0;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 400px;
+      padding: 40px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .login-header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .login-header h2 {
+      font-size: 26px;
+      font-weight: 800;
+      background: linear-gradient(to right, #3b82f6, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .login-header p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .form-group {
+      margin-bottom: 0;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+    }
+
+    .register-link {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .register-link a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .register-link a:hover {
+      color: #1d4ed8;
+      text-decoration: underline;
+    }
+
+    .error-msg {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-container">
+    <div class="login-header">
+      <h2>프로젝트 문서관리</h2>
+      <p>로그인 후 파일 관리 및 협업 편집을 시작하세요</p>
+    </div>
+
+    <!-- Error Message Box -->
+    <div class="error-msg" id="error-box">
+      <i data-lucide="alert-circle" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
+      <span id="error-text">오류 메시지</span>
+    </div>
+
+    <!-- Login Form -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="form-group">
+        <label for="username">아이디 (ID)</label>
+        <input type="text" class="form-input" id="username" placeholder="아이디 입력" required>
+      </div>
+
+      <div class="form-group">
+        <label for="password">비밀번호 (Password)</label>
+        <input type="password" class="form-input" id="password" placeholder="비밀번호 입력" required>
+      </div>
+    </div>
+
+    <button class="btn-primary btn-login" id="btn-login-submit">
+      로그인
+    </button>
+
+    <div class="register-link">
+      아직 계정이 없으신가요? <a href="register.html">회원신청 하기</a>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const btnSubmit = document.getElementById('btn-login-submit');
+      const errorBox = document.getElementById('error-box');
+      const errorText = document.getElementById('error-text');
+
+      // 로그인 처리 함수
+      async function handleLogin() {
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!username || !password) {
+          showError('아이디와 비밀번호를 모두 입력해 주세요.');
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+
+          const result = await response.json();
+          if (response.ok && result.success) {
+            window.location.href = 'index.html'; // 로그인 성공 시 대시보드로 이동
+          } else {
+            showError(result.error || '로그인에 실패했습니다.');
+          }
+        } catch (err) {
+          console.error(err);
+          showError('서버와의 통신에 실패했습니다.');
+        }
+      }
+
+      function showError(msg) {
+        errorText.textContent = msg;
+        errorBox.style.display = 'flex';
+      }
+
+      // 이벤트 리스너 등록
+      btnSubmit.addEventListener('click', handleLogin);
+      usernameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') passwordInput.focus();
+      });
+      passwordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleLogin();
+      });
+    });
+  </script>
+</body>
+
+</html>

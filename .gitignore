@@ -1,0 +1,5 @@
+node_modules/
+documents/
+personal_documents/
+.DS_Store
+*.log

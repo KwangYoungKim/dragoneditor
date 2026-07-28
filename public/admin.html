@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>관리자 페이지 - 프로젝트 문서관리</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .admin-nav {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 12px;
+    }
+
+    .nav-tab {
+      padding: 10px 20px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-tab.active {
+      background: rgba(59, 130, 246, 0.15);
+      color: #3b82f6;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .nav-tab:hover:not(.active) {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      text-align: left;
+    }
+
+    .admin-table th,
+    .admin-table td {
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .admin-table th {
+      font-weight: 600;
+      color: var(--text-secondary);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .admin-table td {
+      font-size: 14px;
+      color: var(--text-primary);
+      vertical-align: middle;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-pending {
+      background: rgba(249, 115, 22, 0.15);
+      color: #f97316;
+    }
+
+    .badge-approved {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+    }
+
+    .badge-rejected {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+    }
+
+    .badge-withdrawn {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-action-sm {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-approve {
+      background: var(--accent-gradient);
+      color: white;
+    }
+
+    .btn-approve:hover {
+      background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+      transform: translateY(-1px);
+    }
+
+    .btn-reject {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+
+    .btn-reject:hover {
+      background: rgba(239, 68, 68, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .btn-withdraw {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .btn-withdraw:hover {
+      background: rgba(239, 68, 68, 0.2);
+      border-color: #ef4444;
+      transform: translateY(-1px);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo-section">
+        <h1>관리자 페이지 (Admin Panel)</h1>
+        <p>사용자 가입 승인 및 회원 권한 관리를 수행합니다</p>
+      </div>
+      <div>
+        <button class="btn-action" onclick="window.location.href='index.html'">
+          <i data-lucide="arrow-left" style="width: 14px; height: 14px; vertical-align: middle;"></i> 대시보드로 돌아가기
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Section -->
+    <main class="dashboard-panel">
+      <!-- Tabs Navigation -->
+      <div class="admin-nav">
+        <div class="nav-tab active" id="tab-pending-btn" onclick="switchTab('pending')">가입/탈퇴 승인 대기열</div>
+        <div class="nav-tab" id="tab-all-btn" onclick="switchTab('all')">전체 회원 관리</div>
+      </div>
+
+      <!-- Tab 1: 가입 승인 대기열 -->
+      <div class="tab-content active" id="tab-pending-content">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>아이디 (ID)</th>
+              <th>이름</th>
+              <th>가입/탈퇴 신청일</th>
+              <th>신청 구분</th>
+              <th style="text-align: right;">승인 처리</th>
+            </tr>
+          </thead>
+          <tbody id="pending-users-list">
+            <!-- Dynamic Injection -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Tab 2: 전체 회원 관리 -->
+      <div class="tab-content" id="tab-all-content">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>아이디 (ID)</th>
+              <th>이름</th>
+              <th>역할 (Role)</th>
+              <th>가입 상태</th>
+              <th>가입일</th>
+              <th style="text-align: right;">관리 작업</th>
+            </tr>
+          </thead>
+          <tbody id="all-users-list">
+            <!-- Dynamic Injection -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // 탭 전환 기능
+    function switchTab(tabId) {
+      document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+
+      if (tabId === 'pending') {
+        document.getElementById('tab-pending-btn').classList.add('active');
+        document.getElementById('tab-pending-content').classList.add('active');
+      } else {
+        document.getElementById('tab-all-btn').classList.add('active');
+        document.getElementById('tab-all-content').classList.add('active');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+
+      // 권한 검증 및 데이터 조회
+      async function checkAuthAndLoad() {
+        try {
+          const authRes = await fetch('/api/auth/me');
+          const authData = await authRes.json();
+
+          if (!authData.loggedIn) {
+            alert('로그인이 필요합니다.');
+            window.location.href = 'login.html';
+            return;
+          }
+
+          if (authData.user.role !== 'admin') {
+            alert('관리자 권한이 없습니다.');
+            window.location.href = 'index.html';
+            return;
+          }
+
+          // 정상 권한 확인 완료, 유저 목록 로드
+          await loadUsers();
+        } catch (err) {
+          console.error(err);
+          alert('인증 정보를 가져오는 도중 오류가 발생했습니다.');
+          window.location.href = 'login.html';
+        }
+      }
+
+      async function loadUsers() {
+        try {
+          const response = await fetch('/api/admin/users');
+          const users = await response.json();
+
+          const pendingList = document.getElementById('pending-users-list');
+          const allList = document.getElementById('all-users-list');
+
+          pendingList.innerHTML = '';
+          allList.innerHTML = '';
+
+          // 가입 대기자(pending) 및 탈퇴 대기자(pending_withdrawal) 분류
+          const pendingUsers = users.filter(u => u.status === 'pending' || u.status === 'pending_withdrawal');
+
+          // 1. 대기자 렌더링
+          if (pendingUsers.length === 0) {
+            pendingList.innerHTML = `
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 40px 0;">
+                  가입 승인 또는 탈퇴 처리를 대기 중인 회원이 없습니다.
+                </td>
+              </tr>
+            `;
+          } else {
+            pendingUsers.forEach(user => {
+              const tr = document.createElement('tr');
+
+              let typeText = '';
+              let actionButtons = '';
+              if (user.status === 'pending') {
+                typeText = '<span class="badge badge-pending">가입대기</span>';
+                actionButtons = `
+                  <button class="btn-action-sm btn-approve" data-id="${user.username}">승인</button>
+                  <button class="btn-action-sm btn-reject" data-id="${user.username}" style="margin-left: 6px;">거절</button>
+                `;
+              } else {
+                typeText = '<span class="badge badge-withdrawn">탈퇴신청</span>';
+                actionButtons = `
+                  <button class="btn-action-sm btn-withdraw" data-id="${user.username}" style="background: #ef4444; color: white; border: none;">탈퇴 승인</button>
+                `;
+              }
+
+              tr.innerHTML = `
+                <td><strong>${escapeHtml(user.username)}</strong></td>
+                <td>${escapeHtml(user.name)}</td>
+                <td>${formatDate(user.created_at)}</td>
+                <td>${typeText}</td>
+                <td style="text-align: right;">${actionButtons}</td>
+              `;
+              pendingList.appendChild(tr);
+            });
+          }
+
+          // 2. 전체 회원 렌더링
+          users.forEach(user => {
+            const tr = document.createElement('tr');
+
+            // 배지 클래스 지정
+            let statusBadgeClass = 'badge-pending';
+            let statusText = '대기';
+            if (user.status === 'approved') {
+              statusBadgeClass = 'badge-approved';
+              statusText = '승인됨';
+            } else if (user.status === 'rejected') {
+              statusBadgeClass = 'badge-rejected';
+              statusText = '거절됨';
+            } else if (user.status === 'pending_withdrawal') {
+              statusBadgeClass = 'badge-withdrawn';
+              statusText = '탈퇴신청';
+            }
+
+            // 잠금 상태 배지 추가
+            let lockBadge = user.is_locked
+              ? ` <span class="badge badge-rejected" style="margin-left: 6px;"><i data-lucide="lock" style="width: 10px; height: 10px; display: inline-block; vertical-align: middle; margin-right: 2px;"></i>잠김</span>`
+              : '';
+
+            // 관리 작업 버튼 처리 (어드민 본인은 탈퇴불가)
+            const isSelf = user.username === 'admin';
+            let actionButtons = '';
+
+            if (isSelf) {
+              actionButtons = `<span style="font-size: 12px; color: var(--text-muted);">관리 주체</span>`;
+            } else {
+              // 비밀번호 초기화 버튼 (기본 1234로 초기화)
+              actionButtons += `<button class="btn-action-sm btn-reset-pw" data-id="${user.username}" style="margin-right: 6px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); color: #3b82f6;">비번 초기화</button>`;
+
+              // 계정이 잠겨 있는 경우 '잠금 해제' 버튼 노출
+              if (user.is_locked) {
+                actionButtons += `<button class="btn-action-sm btn-unlock" data-id="${user.username}" style="margin-right: 6px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981;">잠금 해제</button>`;
+              }
+
+              // 탈퇴 처리는 일반 강제 탈퇴와 탈퇴 신청 상태에 따른 텍스트 차별화
+              if (user.status === 'pending_withdrawal') {
+                actionButtons += `<button class="btn-action-sm btn-withdraw" data-id="${user.username}" style="background: #ef4444; color: white; border: none;">탈퇴 승인</button>`;
+              } else {
+                actionButtons += `<button class="btn-action-sm btn-withdraw" data-id="${user.username}">강제 탈퇴</button>`;
+              }
+            }
+
+            tr.innerHTML = `
+              <td><strong>${escapeHtml(user.username)}</strong></td>
+              <td>${escapeHtml(user.name)}</td>
+              <td><span style="font-size: 13px; color: ${user.role === 'admin' ? '#3b82f6' : 'var(--text-secondary)'}">${user.role === 'admin' ? '관리자' : '일반기여자'}</span></td>
+              <td><span class="badge ${statusBadgeClass}">${statusText}</span>${lockBadge}</td>
+              <td>${formatDate(user.created_at)}</td>
+              <td style="text-align: right;">${actionButtons}</td>
+            `;
+            allList.appendChild(tr);
+          });
+
+          // 액션 이벤트 등록
+          document.querySelectorAll('.btn-approve').forEach(btn => {
+            btn.addEventListener('click', (e) => handleUserAction(e.target.getAttribute('data-id'), 'approve'));
+          });
+          document.querySelectorAll('.btn-reject').forEach(btn => {
+            btn.addEventListener('click', (e) => handleUserAction(e.target.getAttribute('data-id'), 'reject'));
+          });
+          document.querySelectorAll('.btn-withdraw').forEach(btn => {
+            btn.addEventListener('click', (e) => handleUserAction(e.target.getAttribute('data-id'), 'withdraw'));
+          });
+          document.querySelectorAll('.btn-unlock').forEach(btn => {
+            btn.addEventListener('click', (e) => handleUserAction(e.target.getAttribute('data-id'), 'unlock'));
+          });
+          document.querySelectorAll('.btn-reset-pw').forEach(btn => {
+            btn.addEventListener('click', (e) => handleUserAction(e.target.getAttribute('data-id'), 'reset-password'));
+          });
+
+          lucide.createIcons();
+        } catch (err) {
+          console.error(err);
+          alert('사용자 데이터를 조회하는 도중 서버 에러가 발생했습니다.');
+        }
+      }
+
+      async function handleUserAction(username, action) {
+        let actionUrl = `/api/admin/users/${action}`;
+        let confirmMsg = '';
+        if (action === 'approve') confirmMsg = `[${username}] 가입 신청을 승인하시겠습니까?`;
+        if (action === 'reject') confirmMsg = `[${username}] 가입 신청을 거절하시겠습니까?`;
+        if (action === 'withdraw') confirmMsg = `[${username}] 회원의 탈퇴 처리를 진행(데이터 삭제)하시겠습니까?`;
+        if (action === 'unlock') confirmMsg = `[${username}] 계정 잠금을 해제하시겠습니까?`;
+        if (action === 'reset-password') confirmMsg = `[${username}] 계정 비밀번호를 '1234'로 강제 초기화하시겠습니까?`;
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+          const response = await fetch(actionUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+          });
+
+          const result = await response.json();
+          if (response.ok && result.success) {
+            if (action === 'reset-password') {
+              alert('비밀번호가 성공적으로 \'1234\'로 초기화되었습니다.');
+            } else {
+              alert('요청이 정상 완료되었습니다.');
+            }
+            await loadUsers(); // 리스트 새로고침
+          } else {
+            alert(result.error || '작업 처리 중 실패했습니다.');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('작업 중 서버 오류가 발생했습니다.');
+        }
+      }
+
+      function formatDate(dateString) {
+        const date = new Date(dateString);
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      }
+
+      function escapeHtml(text) {
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return text.replace(/[&<>"']/g, m => map[m]);
+      }
+
+      checkAuthAndLoad();
+    });
+  </script>
+</body>
+
+</html>

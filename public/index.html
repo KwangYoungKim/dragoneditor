@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>프로젝트 문서 협업 시스템</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Lucide Icons for premium visual feeling -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body style="opacity: 0; transition: opacity 0.3s ease;">
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo-section">
+        <h1>Dragon Editor</h1>
+        <p>문서 협업 및 결함 관리 시스템</p>
+      </div>
+      <div class="actions-section" style="display: flex; gap: 12px; align-items: center;">
+        <span id="user-display-name" style="font-size: 14px; font-weight: 600; color: #fff; margin-right: 8px;">계정 확인
+          중...</span>
+
+        <!-- 어드민 전용 관리 버튼 (기본 숨김) -->
+        <button class="btn-action" id="btn-admin-panel"
+          style="display: none; border-color: rgba(59, 130, 246, 0.4); color: #3b82f6;"
+          onclick="window.location.href='admin.html'">
+          <i data-lucide="shield-check"
+            style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> 관리자
+        </button>
+
+        <!-- 파일 업로드 인풋 (숨김) -->
+        <input type="file" id="file-upload-input" style="display: none;" accept=".xlsx,.docx,.pptx">
+
+        <!-- 파일 업로드 트리거 버튼 -->
+        <button class="btn-action" id="btn-upload-trigger"
+          style="border-color: rgba(16, 185, 129, 0.4); color: #10b981;">
+          <i data-lucide="upload" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> 로컬
+          파일 불러오기
+        </button>
+
+        <!-- 문서 생성 버튼 -->
+        <button class="btn-primary" id="btn-create-modal">
+          <i data-lucide="plus-circle"></i>
+          새 문서 생성
+        </button>
+
+        <!-- 비밀번호 변경 버튼 -->
+        <button class="btn-action" id="btn-pwd-modal-trigger"
+          style="border-color: rgba(255,255,255,0.08); color: var(--text-secondary);">
+          <i data-lucide="key" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> 비밀번호
+          변경
+        </button>
+
+        <!-- 회원 탈퇴 버튼 -->
+        <button class="btn-action" id="btn-withdraw-self" style="border-color: rgba(239, 68, 68, 0.2); color: #ef4444;">
+          <i data-lucide="user-x" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i> 회원
+          탈퇴 신청
+        </button>
+
+        <!-- 로그아웃 버튼 -->
+        <button class="btn-action" id="btn-logout"
+          style="border-color: rgba(255,255,255,0.08); color: var(--text-secondary);">
+          로그아웃
+        </button>
+      </div>
+    </header>
+
+    <!-- Stats Bar -->
+    <section class="stats-bar">
+      <div class="stat-card">
+        <span class="stat-label">총 등록 문서</span>
+        <span class="stat-value" id="stat-total-files">0</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">최종 수정 문서</span>
+        <span class="stat-value" id="stat-latest-file">-</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">저장 환경</span>
+        <span class="stat-value" style="color: #10b981;">Private Local</span>
+      </div>
+    </section>
+
+    <!-- Dashboard Panel -->
+    <main class="dashboard-panel">
+      <div class="panel-header" style="flex-wrap: wrap; gap: 16px;">
+        <h2 class="panel-title" id="panel-title-text">공유 문서 목록 (.xlsx, .docx, .pptx)</h2>
+
+        <!-- 문서함 탭 전환 버튼 -->
+        <div class="tab-container" style="display: flex; gap: 8px;">
+          <button class="btn-action active" id="tab-shared" style="border-radius: 20px; padding: 6px 16px;">공유
+            문서함</button>
+          <button class="btn-action" id="tab-personal" style="border-radius: 20px; padding: 6px 16px;">개인 문서함</button>
+        </div>
+
+        <!-- 관리자용 특정 유저 선택 필터 (개인 문서함일 때만 노출, 기본 숨김) -->
+        <div id="admin-user-filter-container" style="display: none; align-items: center; gap: 8px;">
+          <span style="font-size: 13px; color: var(--text-secondary);">회원 개인 문서 조회:</span>
+          <select id="admin-user-select"
+            style="background: #111827; border: 1px solid var(--panel-border); border-radius: 6px; padding: 6px 12px; color: white; cursor: pointer; font-size: 13px; outline: none;">
+            <option value="all">전체 회원</option>
+          </select>
+        </div>
+
+        <button class="btn-action" id="btn-refresh" style="margin-left: auto;">
+          <i data-lucide="rotate-cw" style="width: 14px; height: 14px; vertical-align: middle;"></i> 새로고침
+        </button>
+      </div>
+
+      <!-- File List Container -->
+      <div class="file-list" id="file-list-container">
+        <!-- Loading State -->
+        <div class="empty-state">
+          <div class="empty-icon"><i data-lucide="loader" class="animate-spin"></i></div>
+          <p>문서 목록을 불러오는 중입니다...</p>
+        </div>
+      </div>
+
+      <!-- Drag and Drop Overlay for Uploads -->
+      <div id="drop-zone-overlay"
+        style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11, 15, 25, 0.9); backdrop-filter: blur(8px); border: 2px dashed #3b82f6; border-radius: 24px; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 16px; z-index: 100; pointer-events: none; transition: all 0.3s;">
+        <i data-lucide="upload-cloud" style="width: 48px; height: 48px; color: #3b82f6;"></i>
+        <div style="font-size: 18px; font-weight: 700; color: #fff;" id="drop-zone-text">여기에 파일을 놓아 업로드</div>
+        <div style="font-size: 13px; color: var(--text-secondary);">.xlsx, .docx, .pptx 파일 지원 (최대 500MB)</div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Create Document Modal -->
+  <div class="modal" id="create-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>새 문서 생성</h3>
+        <p>문서 종류를 선택하고 이름을 입력하면 해당 템플릿 문서가 생성됩니다.</p>
+      </div>
+      <div class="form-group">
+        <label for="new-filetype">문서 종류</label>
+        <select class="form-input" id="new-filetype" style="background: #111827; cursor: pointer; color: white;">
+          <option value="cell">스프레드시트 (엑셀 - .xlsx)</option>
+          <option value="word">워드 문서 (보고서 - .docx)</option>
+          <option value="slide">프리젠테이션 (파워포인트 - .pptx)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="new-filename">문서 파일명 (예: 프로젝트A_결함정리)</label>
+        <input type="text" class="form-input" id="new-filename" placeholder="파일명 입력 (확장자는 자동 적용)">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-action" id="btn-modal-cancel">취소</button>
+        <button class="btn-primary" id="btn-modal-confirm">생성하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Password Modal -->
+  <div class="modal" id="password-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>비밀번호 변경</h3>
+        <p>현재 비밀번호와 변경할 새 비밀번호를 입력해 주세요.</p>
+      </div>
+      <div class="form-group">
+        <label for="pwd-current">현재 비밀번호</label>
+        <input type="password" class="form-input" id="pwd-current" placeholder="현재 비밀번호 입력" required>
+      </div>
+      <div class="form-group">
+        <label for="pwd-new">새 비밀번호 (4자 이상)</label>
+        <input type="password" class="form-input" id="pwd-new" placeholder="새 비밀번호 입력" required>
+      </div>
+      <div class="form-group">
+        <label for="pwd-new-confirm">새 비밀번호 확인</label>
+        <input type="password" class="form-input" id="pwd-new-confirm" placeholder="새 비밀번호 다시 입력" required>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-action" id="btn-pwd-cancel">취소</button>
+        <button class="btn-primary" id="btn-pwd-confirm"
+          style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);">변경하기</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+
+</html>

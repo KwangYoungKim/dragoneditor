@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>회원 가입 신청 - 프로젝트 문서관리</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      justify-content: center;
+      align-items: center;
+      padding: 0;
+    }
+
+    .register-container {
+      width: 100%;
+      max-width: 420px;
+      padding: 40px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .register-header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .register-header h2 {
+      font-size: 26px;
+      font-weight: 800;
+      background: linear-gradient(to right, #3b82f6, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .register-header p {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .form-group {
+      margin-bottom: 0;
+    }
+
+    .btn-register {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 15px;
+    }
+
+    .login-link {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .login-link a {
+      color: #3b82f6;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .login-link a:hover {
+      color: #1d4ed8;
+      text-decoration: underline;
+    }
+
+    .alert-box {
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .error-msg {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .success-msg {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="register-container">
+    <div class="register-header">
+      <h2>회원 가입 신청</h2>
+      <p>가입 완료 시 관리자의 최종 승인 후 활동할 수 있습니다</p>
+    </div>
+
+    <!-- Alert Box -->
+    <div class="alert-box" id="alert-box">
+      <i data-lucide="alert-circle" id="alert-icon" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
+      <span id="alert-text">알림 내용</span>
+    </div>
+
+    <!-- Registration Form -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="form-group">
+        <label for="reg-username">아이디 (영문 소문자/숫자, 3~20자)</label>
+        <input type="text" class="form-input" id="reg-username" placeholder="아이디 입력" required>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-name">실명 / 닉네임 (기여자로 표시될 이름)</label>
+        <input type="text" class="form-input" id="reg-name" placeholder="이름 입력" required>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-password">비밀번호 (4자 이상)</label>
+        <input type="password" class="form-input" id="reg-password" placeholder="비밀번호 입력" required>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-password-confirm">비밀번호 확인</label>
+        <input type="password" class="form-input" id="reg-password-confirm" placeholder="비밀번호 확인" required>
+      </div>
+    </div>
+
+    <button class="btn-primary btn-register" id="btn-register-submit">
+      가입 신청하기
+    </button>
+
+    <div class="login-link">
+      이미 가입하셨나요? <a href="login.html">로그인 하러가기</a>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+
+      const usernameInput = document.getElementById('reg-username');
+      const nameInput = document.getElementById('reg-name');
+      const passwordInput = document.getElementById('reg-password');
+      const confirmInput = document.getElementById('reg-password-confirm');
+      const btnSubmit = document.getElementById('btn-register-submit');
+      const alertBox = document.getElementById('alert-box');
+      const alertText = document.getElementById('alert-text');
+      const alertIcon = document.getElementById('alert-icon');
+
+      async function handleRegister() {
+        const username = usernameInput.value.trim();
+        const name = nameInput.value.trim();
+        const password = passwordInput.value;
+        const confirm = confirmInput.value;
+
+        // 유효성 검사
+        if (!username || !name || !password || !confirm) {
+          showAlert('모든 양식을 채워주세요.', 'error');
+          return;
+        }
+
+        const idPattern = /^[a-z0-9]{3,20}$/;
+        if (!idPattern.test(username)) {
+          showAlert('아이디는 3~20자의 영문 소문자와 숫자만 가능합니다.', 'error');
+          return;
+        }
+
+        if (password.length < 4) {
+          showAlert('비밀번호는 최소 4자 이상이어야 합니다.', 'error');
+          return;
+        }
+
+        if (password !== confirm) {
+          showAlert('비밀번호와 비밀번호 확인이 일치하지 않습니다.', 'error');
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, name, password })
+          });
+
+          const result = await response.json();
+          if (response.ok && result.success) {
+            showAlert(result.message, 'success');
+            btnSubmit.disabled = true;
+            // 2초 뒤 로그인 화면으로 이동
+            setTimeout(() => {
+              window.location.href = 'login.html';
+            }, 2500);
+          } else {
+            showAlert(result.error || '회원가입 신청에 실패했습니다.', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          showAlert('서버와의 통신에 실패했습니다.', 'error');
+        }
+      }
+
+      function showAlert(msg, type) {
+        alertText.textContent = msg;
+        alertBox.className = 'alert-box ' + (type === 'error' ? 'error-msg' : 'success-msg');
+        alertIcon.setAttribute('data-lucide', type === 'error' ? 'alert-circle' : 'check-circle2');
+        alertBox.style.display = 'flex';
+        lucide.createIcons();
+      }
+
+      btnSubmit.addEventListener('click', handleRegister);
+    });
+  </script>
+</body>
+
+</html>
