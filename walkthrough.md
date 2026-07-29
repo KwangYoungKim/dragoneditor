@@ -1,6 +1,6 @@
 # 프로젝트 기동 및 오류 해결 결과 보고 (Walkthrough)
 
-ONLYOFFICE 컨테이너의 기동 오류(EBUSY), 로고 및 아이콘 원복 문제, 'DragonEditor' 텍스트 잘림 현상, 그리고 데이터베이스(PostgreSQL) 연결 실패 문제를 모두 분석하여 해결을 완료했습니다.
+ONLYOFFICE 컨테이너의 기동 오류(EBUSY), 로고 및 아이콘 원복 문제, 'DragonEditor' 텍스트 잘림 현상, 데이터베이스(PostgreSQL) 연결 실패, 그리고 게스트 권한 문제를 모두 분석하여 해결을 완료했습니다.
 
 ---
 
@@ -32,7 +32,15 @@ ONLYOFFICE 컨테이너의 기동 오류(EBUSY), 로고 및 아이콘 원복 문
   - 5대 에디터의 `app.css` 내에서 `.extra #header-logo` 컨테이너에 **`pointer-events: none;`** 및 **`cursor: default;`** 스타일을 영구 적용했습니다.
   - 이로써 마우스 호버 시 일반 텍스트나 이미지처럼 손가락 커서(Pointer)가 표시되지 않으며, 클릭해도 아무런 동작을 수행하지 않는 순수 브랜드 로고(Static Image)로 완전 변경되었습니다.
 
-### 5. PostgreSQL 데이터베이스 컨테이너 연동 및 환경 변수화
+### 5. guest 사용자 계정 권한 제한 (조회 및 다운로드만 허용, 편집 불가)
+- **원인:** 기존에는 가입 승인된 모든 사용자(`guest` 포함)가 공유문서함의 문서를 클릭 시 편집 모드로 연결되어 자유롭게 내용을 수정할 수 있었습니다.
+- **해결:** 
+  - `server.js`의 ONLYOFFICE 설정 생성 API(`/api/config/:filename`)에서 로그인한 유저의 아이디를 대조해 `guest` 계정 여부를 확인하도록 로직을 추가했습니다.
+  - `guest` 계정일 경우, ONLYOFFICE 뷰어 실행 모드를 **`view`**로 고정하고, `permissions` 설정에서 **`edit: false`** 및 **`download: true`**를 주입했습니다.
+  - 이로써 `guest` 계정으로 접속한 사용자는 공유문서함 내 문서를 열었을 때 **내용을 편집할 수 없으며(Read-only), 오직 문서 확인 및 파일 다운로드만 허용**하도록 철저하게 권한이 분리되었습니다.
+  - 관련 파일: [server.js](file:///Users/kangsunkim/defect-tracker-onlyoffice/server.js)
+
+### 6. PostgreSQL 데이터베이스 컨테이너 연동 및 환경 변수화
 - **원인:** `cmm-postgres` 컨테이너가 중지되어 있었으며, `server.js` 파일에 예전 사설 IP인 `192.168.1.35` 주소와 `postgres` 기본 데이터베이스로 연결 정보가 고정(hardcoded)되어 연결 오류가 발생했습니다.
 - **해결:** 
   - `cmm-postgres` 컨테이너를 다시 구동시켰습니다.
@@ -48,8 +56,8 @@ ONLYOFFICE 컨테이너의 기동 오류(EBUSY), 로고 및 아이콘 원복 문
 - **onlyoffice-ds** 및 **cmm-postgres** 컨테이너 모두가 오류 로그 없이 정상 구동 중입니다.
 ```bash
 CONTAINER ID   IMAGE                              STATUS         PORTS
-onlyoffice-ds  onlyoffice/documentserver:latest   Up 5 seconds   443/tcp, 0.0.0.0:8080->80/tcp
-cmm-postgres   postgres:14                        Up 1 hour      0.0.0.0:5432->5432/tcp
+onlyoffice-ds  onlyoffice/documentserver:latest   Up 10 seconds  443/tcp, 0.0.0.0:8080->80/tcp
+cmm-postgres   postgres:14                        Up 16 hours    0.0.0.0:5432->5432/tcp
 ```
 
 ### 2. Node Backend 서버 구동 상태

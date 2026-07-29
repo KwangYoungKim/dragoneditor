@@ -85,7 +85,11 @@ BACKEND_HOST=http://localhost:3000 npm start
 - **문제:** 헤더 로고를 클릭하면 ONLYOFFICE 공식 홈페이지로 이동하는 외부 링크와 손가락 포인터(`cursor: pointer`)가 노출되는 문제가 있었습니다.
 - **해결:** CSS 파일 내 `#header-logo` 영역에 `pointer-events: none;` 및 `cursor: default;` 스타일을 강제 적용하여, 클릭 시 아무 행동도 하지 않고 일반 이미지처럼 동작하도록 마크업 이벤트를 무력화했습니다.
 
-### 5. PostgreSQL 연동 및 DB 주소 환경 변수화
+### 5. guest 사용자 계정 권한 제한 (조회 및 다운로드만 허용, 편집 불가)
+- **문제:** 가입 승인된 모든 사용자(`guest` 포함)가 공유문서함의 문서를 편집 모드로 수정할 수 있어 불필요한 수정 가능성이 있었습니다.
+- **해결:** `guest` 계정일 때 ONLYOFFICE 에디터의 실행 모드를 `view`로 고정하고, `permissions` 객체에서 `edit: false` 및 `download: true`를 주입하여 조회와 다운로드만 가능하게 처리했습니다.
+
+### 6. PostgreSQL 연동 및 DB 주소 환경 변수화
 - **문제:** 중지된 DB 컨테이너 복구와 함께, `server.js`에 이전 하드코딩된 사설 IP가 기재되어 DB 통신 실패 에러가 발생했습니다.
 - **해결:** 비밀번호 재설정(`1234`)과 함께, `server.js` 파일이 IP를 고정하지 않고 `DB_HOST`, `DB_PORT`, `DB_NAME` 등의 환경 변수 환경에 유연하게 대처할 수 있도록 로직을 고도화했습니다.
 

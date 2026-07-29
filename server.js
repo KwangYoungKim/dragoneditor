@@ -1003,19 +1003,25 @@ app.get('/api/config/:filename', requireLogin, (req, res) => {
 
   const chatEnabled = req.query.chat === 'true';
   const currentUser = req.session.user; // 로그인한 세션 유저 정보 추출
+  const isGuest = currentUser.username === 'guest';
+  const mode = isGuest ? 'view' : 'edit';
 
   const config = {
     document: {
       fileType: fileType,
       key: key,
       title: filename,
-      url: `${BACKEND_HOST}/documents/${encodeURIComponent(filename)}`
+      url: `${BACKEND_HOST}/documents/${encodeURIComponent(filename)}`,
+      permissions: {
+        edit: !isGuest,
+        download: true
+      }
     },
     documentType: documentType,
     editorConfig: {
       callbackUrl: `${BACKEND_HOST}/api/track?filename=${encodeURIComponent(filename)}`,
       lang: 'ko-KR',
-      mode: 'edit',
+      mode: mode,
       user: {
         id: currentUser.username, // 편집자를 고유한 로그인 아이디로 변경!
         name: currentUser.name // 편집자 실명 연동!
