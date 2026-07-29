@@ -89,7 +89,11 @@ BACKEND_HOST=http://localhost:3000 npm start
 - **문제:** 가입 승인된 모든 사용자(`guest` 포함)가 공유문서함의 문서를 편집 모드로 수정할 수 있어 불필요한 수정 가능성이 있었습니다.
 - **해결:** `guest` 계정일 때 ONLYOFFICE 에디터의 실행 모드를 `view`로 고정하고, `permissions` 객체에서 `edit: false` 및 `download: true`를 주입하여 조회와 다운로드만 가능하게 처리했습니다.
 
-### 6. PostgreSQL 연동 및 DB 주소 환경 변수화
+### 6. 문서 사용 전용 폰트 일괄 다운로드 기능 제공 (ZIP 아카이브)
+- **문제:** 에디터 내부에서 사용 중인 한글 폰트(`Pretendard`, `Freesentation` 등)를 클라이언트 로컬 컴퓨터에 가지고 있지 않은 사용자의 경우 폰트 매칭이 어긋날 수 있습니다.
+- **해결:** `server.js`에 `/api/fonts/download` 엔드포인트를 신설하여 `fonts/` 폴더 내의 모든 `.ttf` 및 `.otf` 파일들을 동적으로 압축하여 `DragonEditor_Fonts.zip`으로 다운로드할 수 있게 하였고, 대시보드 메인 화면 상단에 보라색 **[폰트 다운로드]** 버튼을 노출했습니다.
+
+### 7. PostgreSQL 연동 및 DB 주소 환경 변수화
 - **문제:** 중지된 DB 컨테이너 복구와 함께, `server.js`에 이전 하드코딩된 사설 IP가 기재되어 DB 통신 실패 에러가 발생했습니다.
 - **해결:** 비밀번호 재설정(`1234`)과 함께, `server.js` 파일이 IP를 고정하지 않고 `DB_HOST`, `DB_PORT`, `DB_NAME` 등의 환경 변수 환경에 유연하게 대처할 수 있도록 로직을 고도화했습니다.
 

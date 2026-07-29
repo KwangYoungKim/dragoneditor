@@ -7,6 +7,8 @@ const ExcelJS = require('exceljs');
 const { Pool } = require('pg');
 const session = require('express-session');
 const crypto = require('crypto');
+const { exec } = require('child_process');
+
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -965,7 +967,39 @@ app.post('/api/track', async (req, res) => {
   res.json({ error: 0 });
 });
 
+// 폰트 전체 다운로드 API (fonts 폴더의 모든 ttf, otf 파일을 하나의 zip으로 압축하여 다운로드)
+app.get('/api/fonts/download', requireLogin, (req, res) => {
+  const fontsDir = path.join(__dirname, 'fonts');
+  if (!fs.existsSync(fontsDir)) {
+    return res.status(404).send('폰트 폴더를 찾을 수 없습니다.');
+  }
+
+  const tmpZipPath = path.join(__dirname, 'public', 'fonts.zip');
+
+  // exec zip command
+  exec(`zip -j -r "${tmpZipPath}" "${fontsDir}" -i "*.ttf" "*.otf"`, (error, stdout, stderr) => {
+    if (error) {
+      console.error('[Fonts Zip] Error creating zip:', error);
+      return res.status(500).send('폰트 패키징 중 오류가 발생했습니다.');
+    }
+
+    res.download(tmpZipPath, 'DragonEditor_Fonts.zip', (err) => {
+      if (err) {
+        console.error('[Fonts Zip] Error sending file:', err);
+      }
+      try {
+        if (fs.existsSync(tmpZipPath)) {
+          fs.unlinkSync(tmpZipPath);
+        }
+      } catch (e) {
+        console.error('[Fonts Zip] Temp file clean up failed:', e);
+      }
+    });
+  });
+});
+
 // 5. ONLYOFFICE 편집 설정 데이터 획득 API (로그인 계정과 문서 작성자 프로필 연동)
+
 app.get('/api/config/:filename', requireLogin, (req, res) => {
   const filename = req.params.filename;
 

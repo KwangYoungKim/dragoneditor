@@ -1,6 +1,6 @@
 # 프로젝트 기동 및 오류 해결 결과 보고 (Walkthrough)
 
-ONLYOFFICE 컨테이너의 기동 오류(EBUSY), 로고 및 아이콘 원복 문제, 'DragonEditor' 텍스트 잘림 현상, 데이터베이스(PostgreSQL) 연결 실패, 그리고 게스트 권한 문제를 모두 분석하여 해결을 완료했습니다.
+ONLYOFFICE 컨테이너의 기동 오류(EBUSY), 로고 및 아이콘 원복 문제, 'DragonEditor' 텍스트 잘림 현상, 데이터베이스(PostgreSQL) 연결 실패, 게스트 권한 제한, 그리고 사용자 지정 폰트 일괄 다운로드 기능 추가를 모두 완료했습니다.
 
 ---
 
@@ -40,7 +40,14 @@ ONLYOFFICE 컨테이너의 기동 오류(EBUSY), 로고 및 아이콘 원복 문
   - 이로써 `guest` 계정으로 접속한 사용자는 공유문서함 내 문서를 열었을 때 **내용을 편집할 수 없으며(Read-only), 오직 문서 확인 및 파일 다운로드만 허용**하도록 철저하게 권한이 분리되었습니다.
   - 관련 파일: [server.js](file:///Users/kangsunkim/defect-tracker-onlyoffice/server.js)
 
-### 6. PostgreSQL 데이터베이스 컨테이너 연동 및 환경 변수화
+### 6. 문서 사용 전용 폰트 일괄 다운로드 기능 제공 (ZIP 아카이브 다운로드)
+- **원인:** 문서 작성에 사용하기 위해 설치된 사용자 지정 한글 폰트(`Pretendard`, `Freesentation` 등)를 로컬 컴퓨터에 보유하지 않은 다른 사용자나 기기에서 편집 시 폰트가 어긋날 위험성이 있습니다.
+- **해결:**
+  - **서버 폰트 패키징 API 개발:** `server.js`에 `/api/fonts/download` 엔드포인트를 구현하여, 호출 즉시 로컬 `fonts/` 폴더 내에 수동/자동 등록된 모든 `.ttf` 및 `.otf` 파일들을 임시 ZIP 아카이브(`DragonEditor_Fonts.zip`)로 자동 압축하여 다운로드하도록 설계했습니다.
+  - **대시보드 UI 연동:** `public/index.html` 파일의 액션 바(Logout 버튼 좌측)에 시인성 높고 세련된 보라색 테마의 **[폰트 다운로드]** 아이콘 버튼을 신설하여 편리하게 전체 폰트 패키지를 다운로드할 수 있도록 사용자 편의성을 고도화했습니다.
+  - 관련 파일: [server.js](file:///Users/kangsunkim/defect-tracker-onlyoffice/server.js), [index.html](file:///Users/kangsunkim/defect-tracker-onlyoffice/public/index.html)
+
+### 7. PostgreSQL 데이터베이스 컨테이너 연동 및 환경 변수화
 - **원인:** `cmm-postgres` 컨테이너가 중지되어 있었으며, `server.js` 파일에 예전 사설 IP인 `192.168.1.35` 주소와 `postgres` 기본 데이터베이스로 연결 정보가 고정(hardcoded)되어 연결 오류가 발생했습니다.
 - **해결:** 
   - `cmm-postgres` 컨테이너를 다시 구동시켰습니다.
@@ -75,3 +82,4 @@ cmm-postgres   postgres:14                        Up 16 hours    0.0.0.0:5432->5
    - **비밀번호:** `admin123`
 3. 로그인 후 대시보드 리스트에서 아무 문서(예: `테스트1.docx` 또는 `테스트1.xlsx`)를 클릭하여 편집 창을 엽니다.
 4. 에디터가 로딩되면 상단 타이틀 바 왼쪽에 **DragonEditor** 전체 텍스트가 잘리는 글자 없이 예쁘게 노출되는지 확인해 주세요. (로딩 캐시가 남아있을 수 있으므로 시크릿 창 또는 강력 새로고침 `Ctrl + Shift + R`으로 확인하시는 것을 적극 권장합니다.)
+5. 대시보드 상단 우측의 **[폰트 다운로드]** 버튼을 클릭하여 `DragonEditor_Fonts.zip`이 정상 다운로드되며, 압축 해제 시 `Pretendard`, `Freesentation` 등 설치된 서체 파일들이 포함되어 있는지 확인해 주세요.
