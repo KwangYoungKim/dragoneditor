@@ -18,6 +18,9 @@ services:
       # 로고 이미지 및 브랜딩(DragonEditor) 유지를 위한 볼륨 마운트
       - ./public/header-logo_s.svg:/var/www/onlyoffice/documentserver/web-apps/apps/common/main/resources/img/header/header-logo_s.svg
       - ./public/dark-logo_s.svg:/var/www/onlyoffice/documentserver/web-apps/apps/common/main/resources/img/header/dark-logo_s.svg
+      # 사용자 정의 폰트(Pretendard 등) 추가용 볼륨 마운트
+      - ./fonts:/usr/share/fonts/truetype/custom
+
 
 volumes:
   onlyoffice_data:
